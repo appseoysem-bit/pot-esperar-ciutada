@@ -2191,7 +2191,7 @@ async function loadVideo() {
           if (container) container.insertBefore(iframe, videoPlayer || container.firstChild);
         }
 
-        iframe.src = 'https://www.youtube.com/embed/' + videoId;
+        iframe.src = 'https://www.youtube.com/embed/' + videoId + '?rel=0&modestbranding=1&showinfo=0&controls=0';
 
       } else {
 
