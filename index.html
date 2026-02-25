@@ -2138,8 +2138,11 @@ async function saveEquipMember(index) {
 // VIDEO Functions
 // ============================================================
 
+
 async function loadVideo() {
+
   try {
+
     const { data, error } = await sb
       .from('media')
       .select('*')
@@ -2153,21 +2156,61 @@ async function loadVideo() {
     if (error && error.code !== 'PGRST116') throw error;
 
     if (data && data.url) {
-      if (videoSource) videoSource.src = data.url;
-      if (videoPlayer) {
-        videoPlayer.load();
-        videoPlayer.style.display = 'block';
+
+      const url = data.url;
+      const ytMatch = url.match(/(?:youtube.com\/watch\?v=|youtu.be\/)([a-zA-Z0-9_-]{11})/);
+
+      if (ytMatch) {
+
+        const videoId = ytMatch[1];
+
+        if (videoPlayer) videoPlayer.style.display = 'none';
+        if (videoEmpty) videoEmpty.style.display = 'none';
+
+        let iframe = document.getElementById('youtubeEmbed');
+
+        if (!iframe) {
+          iframe = document.createElement('iframe');
+          iframe.id = 'youtubeEmbed';
+          iframe.style.cssText = 'width:100%;aspect-ratio:16/9;border:none;border-radius:12px;';
+          iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+          iframe.allowFullscreen = true;
+
+          const container = videoPlayer ? videoPlayer.parentElement : document.querySelector('.video-container');
+
+          if (container) container.insertBefore(iframe, videoPlayer || container.firstChild);
+        }
+
+        iframe.src = 'https://www.youtube.com/embed/' + videoId;
+
+      } else {
+
+        let iframe = document.getElementById('youtubeEmbed');
+        if (iframe) iframe.remove();
+
+        if (videoSource) videoSource.src = url;
+
+        if (videoPlayer) {
+          videoPlayer.load();
+          videoPlayer.style.display = 'block';
+        }
+
+        if (videoEmpty) videoEmpty.style.display = 'none';
       }
-      if (videoEmpty) videoEmpty.style.display = 'none';
+
     } else {
+
       if (videoPlayer) videoPlayer.style.display = 'none';
       if (videoEmpty) videoEmpty.style.display = '';
+
     }
+
   } catch (err) {
     console.error('loadVideo error:', err);
-    showToast('error', 'Error', 'No s\'ha pogut carregar el vídeo.');
   }
+
 }
+
 
 async function loadVideoToAdmin() {
   try {
@@ -2185,6 +2228,9 @@ async function loadVideoToAdmin() {
     if (data && data.url) {
       if (videoInfo) videoInfo.style.display = 'block';
       if (videoCurrentUrl) videoCurrentUrl.textContent = data.url;
+
+const urlInput = document.getElementById('adminVideoUrl');
+if (urlInput) urlInput.value = data.url;
     } else {
       if (videoInfo) videoInfo.style.display = 'none';
       if (videoCurrentUrl) videoCurrentUrl.textContent = '';
@@ -2193,6 +2239,49 @@ async function loadVideoToAdmin() {
     console.error('loadVideoToAdmin error:', err);
     showToast('error', 'Error', 'No s\'ha pogut carregar el vídeo a l\'admin.');
   }
+}
+
+
+async function saveVideoUrl() {
+
+  try {
+
+    const urlInput = document.getElementById('adminVideoUrl');
+
+    if (!urlInput || !urlInput.value.trim()) {
+
+      showToast('warning', 'Avís', 'Escriu una URL de vídeo.');
+
+      return;
+
+    }
+
+    const url = urlInput.value.trim();
+
+    const { error } = await sb.from('media').upsert(
+
+      { id: 'video_principal', url: url },
+
+      { onConflict: 'id' }
+
+    );
+
+    if (error) throw error;
+
+    showToast('success', 'Desat', 'URL del vídeo desada correctament.');
+
+    await loadVideo();
+
+    await loadVideoToAdmin();
+
+  } catch (err) {
+
+    console.error('saveVideoUrl error:', err);
+
+    showToast('error', 'Error', "No s'ha pogut desar la URL.");
+
+  }
+
 }
 
 async function saveVideo() {
